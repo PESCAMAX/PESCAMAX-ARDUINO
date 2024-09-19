@@ -1,0 +1,70 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
+
+const char* ssid = "LUNA";
+const char* password = "1023523667";
+
+ESP8266WebServer server(80);
+
+const int loteID = 7; 
+const String userID = "bf92a7f0-e3e1-4ec0-ba9d-857706808da7"; 
+
+void setup(void) {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", []() {
+    server.send(200, "text/plain", "Hello from esp8266 server web!");
+  });
+
+  server.on("/inline", []() {
+    server.send(200, "text/plain", "this works as well");
+  });
+
+  server.on("/data", []() {
+    // Generate random data
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    float temperature = random(150, 300) / 10.0; // Random temperature between 15.0 and 30.0
+    float tds = random(100, 500) / 10.0; // Random TDS between 10.0 and 50.0
+    float ph = random(60, 80) / 10.0; // Random pH between 6.0 and 8.0
+
+    // Create JSON document
+    StaticJsonDocument<200> doc;
+    doc["temperature"] = temperature;
+    doc["tds"] = tds;
+    doc["ph"] = ph;
+    doc["loteID"] = loteID;
+    doc["userID"] = userID;
+
+    String json;
+    serializeJson(doc, json);
+
+    // Send JSON response
+    server.send(200, "application/json", json);
+  });
+
+  server.onNotFound([]() {
+    server.send(404, "text/plain", "Uri not found " + server.uri());
+  });
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}
